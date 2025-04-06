@@ -1,36 +1,76 @@
-fastapi
-uvicorn[standard]
-python-multipart
-requests
-pillow
-opencv-python-headless
-deepface
+# Core AI + Deep Learning
 torch
-torchaudio
+torchvision
+numpy
+pillow
+scikit-learn
+onnxruntime
+
+# Face + Scene Detection
+deepface
+face-recognition
+insightface
+opencv-python
+mediapipe
+
+# Audio Transcription + Analysis
+openai-whisper
+ffmpeg-python
+pydub
+
+# Multimodal (Image + Text + Video)
+clip-by-openai
 transformers
 sentence-transformers
-openai-whisper
 faiss-cpu
-moviepy
-scikit-learn
-tqdm
-aiohttp
-nest_asyncio
-beautifulsoup4
-selenium
+timm
+
+# LLMs + Reasoning + Agents
+openai
 langchain
-duckduckgo-search
-httpx
-pydantic
-numpy
-scipy
-retrying
-bs4
-fake-useragent
-yt-dlp
-PyYAML
-trafilatura
-unstructured
 llama-index
-gitpython
+tiktoken
+anthropic  # For Claude API if added later
+cohere     # For multi-LLM access
+
+# Web Browsing + Internet Search
+duckduckgo-search
+beautifulsoup4
+requests
+html5lib
+selenium
+
+# Telegram Bot + Server
+python-telegram-bot
+fastapi
+uvicorn
+aiohttp
+python-multipart
+
+# Self-Coding & Debugging
+ast
+black
+autopep8
+
+# File Utilities & Env
 python-dotenv
+rich
+tqdm
+pyyaml
+json5
+watchdog
+
+# Memory + Embeddings
+faiss-cpu
+llama-index
+sqlite-utils
+
+# Optional Visualizations (Future)
+matplotlib
+plotly
+pandas
+
+# Optional Dev tools
+pytest
+ipython
+notebook
