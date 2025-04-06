@@ -1,0 +1,10 @@
+python-telegram-bot==20.3
+openai
+faiss-cpu
+moviepy
+transformers
+torch
+torchaudio
+opencv-python-headless
+Pillow
+git+https://github.com/openai/whisper.git
