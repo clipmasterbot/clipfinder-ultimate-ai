@@ -10,3 +10,5 @@ imageio-ffmpeg
 tqdm
 numpy
 scikit-learn
+fastapi
+uvicorn
