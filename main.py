@@ -1,85 +1,87 @@
-FINAL MAIN.PY - MOST ADVANCED AI BOT BACKEND
+ClipFinderBot vFinal: Ultimate AI Architecture
 
-Clip Finder Bot - Fully Autonomous, Self-Evolving, Actor & Show Recognizer
+""" Main AI Features (Integrated from User + Assistant Ideas)
 
-import os import uvicorn from fastapi import FastAPI, UploadFile, File from fastapi.responses import JSONResponse import shutil from deepface import DeepFace import whisper from transformers import CLIPProcessor, CLIPModel from PIL import Image import torch import requests import faiss import numpy as np import datetime from fastapi.middleware.cors import CORSMiddleware
+1. Face Detection and Recognition (DeepFace)
 
-app = FastAPI() app.add_middleware( CORSMiddleware, allow_origins=[""], allow_credentials=True, allow_methods=[""], allow_headers=["*"], )
 
-Load Models
+2. Scene Detection (CLIP + Frame Analysis)
 
-clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32") clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32") whisper_model = whisper.load_model("base")
 
-Database for face recognition & clip embeddings
+3. Audio Transcription (Whisper)
 
-face_db = []  # List of dicts with 'name', 'embedding' clip_db = []  # List of dicts with 'clip_path', 'embedding', 'title', 'actors', 'timestamp' clip_index = faiss.IndexFlatL2(512)  # For CLIP similarity search
 
-Utility: Save uploaded file
+4. Time Period Estimation
 
-async def save_file(uploaded_file: UploadFile, destination: str): with open(destination, "wb") as buffer: shutil.copyfileobj(uploaded_file.file, buffer)
 
-Utility: Extract audio and text
+5. Actor + Show Matching using FAISS and CLIP
 
-def transcribe_audio(path): result = whisper_model.transcribe(path) return result["text"]
 
-Utility: Extract image features
+6. Self-improvement and autonomous learning
 
-def get_clip_features(image_path): image = Image.open(image_path) inputs = clip_processor(text=["scene", "actors", "location"], images=image, return_tensors="pt", padding=True) outputs = clip_model(**inputs) return outputs.image_embeds[0].detach().numpy()
 
-Utility: Detect face and recognize
+7. Web Integration for cross-checking info
 
-def detect_and_recognize_faces(image_path): result = DeepFace.analyze(image_path, actions=['age', 'gender', 'emotion'], enforce_detection=False) recognized = [] for person in result: recognized.append({ "age": person['age'], "gender": person['gender'], "emotion": person['dominant_emotion'] }) return recognized
 
-Utility: Estimate production time
+8. Failure Recovery and Auto-retry with enhanced search
 
-def estimate_time_by_style(face_data): # Very simple heuristic (can be upgraded with ML in future) avg_age = sum([f["age"] for f in face_data]) / len(face_data) now = datetime.datetime.now().year return int(now - avg_age + 20)  # crude approximation
 
-Utility: Autonomous internet search simulation (mock)
+9. GPT-4 API integration for logic, reasoning, coding, and task execution
 
-def mock_internet_search(query): # Real implementation would use a browser-based agent return f"Auto-searched result for: {query}"
 
-Main Inference Endpoint
+10. Autonomous Web Agent mode (future integration)
 
-@app.post("/analyze") async def analyze_video(file: UploadFile = File(...)): filepath = f"temp/{file.filename}" await save_file(file, filepath)
 
-# Step 1: Transcribe
-transcript = transcribe_audio(filepath)
+11. Scheduled data update, multi-model execution
 
-# Step 2: Face Detection & Recognition
-face_data = detect_and_recognize_faces(filepath)
 
-# Step 3: Time Estimation
-estimated_year = estimate_time_by_style(face_data)
+12. Multi-tasking, multi-request parallel handling
 
-# Step 4: CLIP Features
-clip_feat = get_clip_features(filepath)
 
-# Step 5: Search Database
-if clip_index.ntotal > 0:
-    D, I = clip_index.search(np.array([clip_feat]), k=1)
-    match = clip_db[I[0][0]]
-    match_result = {
-        "show": match['title'],
-        "actors": match['actors'],
-        "timestamp": match['timestamp']
-    }
-else:
-    match_result = {
-        "show": "Unknown",
-        "actors": [],
-        "timestamp": None
-    }
+13. Modular, scalable, and self-evolving design
 
-# Step 6: Internet Simulation
-auto_search = mock_internet_search(f"show from {estimated_year} with transcript: {transcript}")
 
-return JSONResponse({
-    "transcript": transcript,
-    "face_data": face_data,
-    "estimated_year": estimated_year,
-    "match_result": match_result,
-    "auto_search": auto_search
-})
+14. Autonomous browser + crowdsourced learning (future ready) """
 
-if name == "main": uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+
+
+import os import shutil import tempfile from fastapi import FastAPI, UploadFile, File, Request from fastapi.responses import JSONResponse from pydantic import BaseModel import uvicorn from utils.deepface_recognition import recognize_faces from utils.scene_classifier import classify_scene from utils.audio_transcriber import transcribe_audio from utils.clip_matcher import match_clip_to_show from utils.meta_learning import record_failure, improve_algorithm from utils.search_range_scanner import scan_time_range from utils.gpt4_enhancer import query_gpt4_for_reasoning from utils.parallel_executor import run_all_models_parallel from utils.autonomous_agent import trigger_web_agent
+
+app = FastAPI()
+
+class MatchRequest(BaseModel): filepath: str
+
+@app.post("/analyze") async def analyze_video(file: UploadFile = File(...)): temp_dir = tempfile.mkdtemp() filepath = os.path.join(temp_dir, file.filename) with open(filepath, "wb") as buffer: shutil.copyfileobj(file.file, buffer)
+
+try:
+    # Run all models in parallel: DeepFace, CLIP, Whisper
+    print("Running model ensemble...")
+    faces, scenes, transcript = run_all_models_parallel(filepath)
+
+    # Match using embeddings
+    print("Matching to known shows/actors...")
+    result = match_clip_to_show(faces, scenes, transcript)
+
+    if not result or result["confidence"] < 0.5:
+        print("Low confidence. Running advanced search.")
+        scan_results = scan_time_range(faces, scenes, transcript)
+        result = scan_results if scan_results else result
+
+    # If still not satisfied, call GPT-4 for intelligent fallback
+    if not result or result["confidence"] < 0.6:
+        result = query_gpt4_for_reasoning(faces, scenes, transcript)
+
+    return JSONResponse(content=result)
+
+except Exception as e:
+    print("Error:", e)
+    record_failure(filepath, str(e))
+    improve_algorithm(filepath)
+    return JSONResponse(content={"error": str(e)}, status_code=500)
+finally:
+    shutil.rmtree(temp_dir)
+
+@app.get("/") def root(): return {"message": "ClipFinderBot vFinal API is active."}
+
+if name == "main": uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
 
