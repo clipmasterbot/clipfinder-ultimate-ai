@@ -1,87 +1,107 @@
-ClipFinderBot vFinal: Ultimate AI Architecture
+import os
+import tempfile
+import logging
+import cv2
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from deepface import DeepFace
+import whisper
+from transformers import CLIPProcessor, CLIPModel
+import torch
+import numpy as np
 
-""" Main AI Features (Integrated from User + Assistant Ideas)
+# === Configuration ===
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")  # Set in your Render environment or .env file
 
-1. Face Detection and Recognition (DeepFace)
+# === Logging setup ===
+logging.basicConfig(level=logging.INFO)
+app = ApplicationBuilder().token(TOKEN).build()
 
+# === Load Models ===
+logging.info("Loading models...")
+whisper_model = whisper.load_model("base")
+clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+logging.info("Models loaded.")
 
-2. Scene Detection (CLIP + Frame Analysis)
+# === Helper Function: Extract Frames ===
+def extract_frames(video_path, interval=1):
+    frames = []
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_count = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if int(frame_count % (fps * interval)) == 0:
+            frames.append(frame)
+        frame_count += 1
+    cap.release()
+    return frames
 
+# === Helper Function: Detect Faces using DeepFace ===
+def detect_faces(frames):
+    detected_faces = []
+    for frame in frames:
+        try:
+            results = DeepFace.extract_faces(img_path=frame, enforce_detection=False)
+            detected_faces.extend(results)
+        except Exception as e:
+            logging.warning(f"Face detection error: {e}")
+            continue
+    return detected_faces
 
-3. Audio Transcription (Whisper)
+# === Helper Function: Transcribe Audio using Whisper ===
+def transcribe_audio(video_path):
+    try:
+        result = whisper_model.transcribe(video_path)
+        return result.get("text", "")
+    except Exception as e:
+        logging.warning(f"Whisper error: {e}")
+        return ""
 
+# === Helper Function: Get CLIP Embedding for an Image ===
+def get_clip_embedding(image):
+    inputs = clip_processor(images=image, return_tensors="pt")
+    with torch.no_grad():
+        outputs = clip_model.get_image_features(**inputs)
+    return outputs.cpu().numpy()
 
-4. Time Period Estimation
+# === Telegram Handler for Video ===
+async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    video = update.message.video or update.message.document
+    file = await context.bot.get_file(video.file_id)
 
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tf:
+        await file.download_to_drive(tf.name)
+        video_path = tf.name
 
-5. Actor + Show Matching using FAISS and CLIP
+    await update.message.reply_text("Analyzing video...")
 
+    # Step 1: Extract frames
+    frames = extract_frames(video_path, interval=1)
+    await update.message.reply_text(f"Extracted {len(frames)} key frames.")
 
-6. Self-improvement and autonomous learning
+    # Step 2: Detect faces
+    faces = detect_faces(frames)
+    await update.message.reply_text(f"Detected {len(faces)} faces in video.")
 
+    # Step 3: Transcribe audio
+    transcript = transcribe_audio(video_path)
+    await update.message.reply_text(f"Transcript:\n{transcript[:1000]}...")
 
-7. Web Integration for cross-checking info
+    # Step 4: CLIP embedding for first frame (placeholder for matching)
+    if frames:
+        clip_vec = get_clip_embedding(frames[0])
+        await update.message.reply_text("Visual features extracted (CLIP vector ready).")
 
+    # Future steps: FAISS matching, actor/show identification
+    await update.message.reply_text("Source identification module coming soon.")
 
-8. Failure Recovery and Auto-retry with enhanced search
+# === Attach Handler ===
+app.add_handler(MessageHandler(filters.VIDEO | filters.Document.VIDEO, handle_video))
 
-
-9. GPT-4 API integration for logic, reasoning, coding, and task execution
-
-
-10. Autonomous Web Agent mode (future integration)
-
-
-11. Scheduled data update, multi-model execution
-
-
-12. Multi-tasking, multi-request parallel handling
-
-
-13. Modular, scalable, and self-evolving design
-
-
-14. Autonomous browser + crowdsourced learning (future ready) """
-
-
-
-import os import shutil import tempfile from fastapi import FastAPI, UploadFile, File, Request from fastapi.responses import JSONResponse from pydantic import BaseModel import uvicorn from utils.deepface_recognition import recognize_faces from utils.scene_classifier import classify_scene from utils.audio_transcriber import transcribe_audio from utils.clip_matcher import match_clip_to_show from utils.meta_learning import record_failure, improve_algorithm from utils.search_range_scanner import scan_time_range from utils.gpt4_enhancer import query_gpt4_for_reasoning from utils.parallel_executor import run_all_models_parallel from utils.autonomous_agent import trigger_web_agent
-
-app = FastAPI()
-
-class MatchRequest(BaseModel): filepath: str
-
-@app.post("/analyze") async def analyze_video(file: UploadFile = File(...)): temp_dir = tempfile.mkdtemp() filepath = os.path.join(temp_dir, file.filename) with open(filepath, "wb") as buffer: shutil.copyfileobj(file.file, buffer)
-
-try:
-    # Run all models in parallel: DeepFace, CLIP, Whisper
-    print("Running model ensemble...")
-    faces, scenes, transcript = run_all_models_parallel(filepath)
-
-    # Match using embeddings
-    print("Matching to known shows/actors...")
-    result = match_clip_to_show(faces, scenes, transcript)
-
-    if not result or result["confidence"] < 0.5:
-        print("Low confidence. Running advanced search.")
-        scan_results = scan_time_range(faces, scenes, transcript)
-        result = scan_results if scan_results else result
-
-    # If still not satisfied, call GPT-4 for intelligent fallback
-    if not result or result["confidence"] < 0.6:
-        result = query_gpt4_for_reasoning(faces, scenes, transcript)
-
-    return JSONResponse(content=result)
-
-except Exception as e:
-    print("Error:", e)
-    record_failure(filepath, str(e))
-    improve_algorithm(filepath)
-    return JSONResponse(content={"error": str(e)}, status_code=500)
-finally:
-    shutil.rmtree(temp_dir)
-
-@app.get("/") def root(): return {"message": "ClipFinderBot vFinal API is active."}
-
-if name == "main": uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
-
+# === Start Bot ===
+if __name__ == "__main__":
+    app.run_polling()
