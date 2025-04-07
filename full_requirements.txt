@@ -1,0 +1,15 @@
+
+torch==2.1.2
+torchvision
+openai-whisper==20231117
+transformers==4.38.2
+sentence-transformers
+faiss-cpu
+opencv-python==4.9.0.80
+numpy
+pillow
+python-telegram-bot==20.5
+fastapi
+uvicorn[standard]
+aiohttp[speedups]
+python-dotenv
